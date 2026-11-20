@@ -534,21 +534,21 @@
     {
       "ecosystem": "npm",
       "name": "node_modules/lucide-react",
-      "version": "0.468.0",
-      "source": "https://registry.npmjs.org/lucide-react/-/lucide-react-0.468.0.tgz",
+      "version": "1.73.0",
+      "source": "https://registry.npmjs.org/lucide-react/-/lucide-react-1.73.0.tgz",
       "license_expression": "ISC",
       "files": [
         {
           "path": "npm/node_modules/lucide-react/LICENSE",
-          "sha256": "1e7290b35280a048667bbf0ebabac1c7fd52a75300e8b2946ac165715997f2bc"
+          "sha256": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57"
         }
       ]
     },
     {
       "ecosystem": "npm",
       "name": "node_modules/react",
-      "version": "19.2.7",
-      "source": "https://registry.npmjs.org/react/-/react-19.2.7.tgz",
+      "version": "19.3.1",
+      "source": "https://registry.npmjs.org/react/-/react-19.3.1.tgz",
       "license_expression": "MIT",
       "files": [
         {
@@ -560,8 +560,8 @@
     {
       "ecosystem": "npm",
       "name": "node_modules/react-dom",
-      "version": "19.2.7",
-      "source": "https://registry.npmjs.org/react-dom/-/react-dom-19.2.7.tgz",
+      "version": "19.3.1",
+      "source": "https://registry.npmjs.org/react-dom/-/react-dom-19.3.1.tgz",
       "license_expression": "MIT",
       "files": [
         {
@@ -573,8 +573,8 @@
     {
       "ecosystem": "npm",
       "name": "node_modules/scheduler",
-      "version": "0.27.0",
-      "source": "https://registry.npmjs.org/scheduler/-/scheduler-0.27.0.tgz",
+      "version": "0.28.0",
+      "source": "https://registry.npmjs.org/scheduler/-/scheduler-0.28.0.tgz",
       "license_expression": "MIT",
       "files": [
         {

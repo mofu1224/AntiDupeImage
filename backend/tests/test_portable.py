@@ -142,7 +142,16 @@ def test_cold_clone_move_offline_and_authenticated_scan(tmp_path):
     (clone / 'data').mkdir()
     (clone / 'data/keep.txt').write_text('preserved user data')
     moved = tmp_path / '移動後 空白フォルダ'
-    clone.rename(moved)
+    # On Windows a just-exited build can leave transient sharing locks.
+    deadline = time.monotonic() + 10
+    while True:
+        try:
+            clone.rename(moved)
+            break
+        except PermissionError as exc:
+            if getattr(exc, 'winerror', None) not in (5, 32) or time.monotonic() >= deadline:
+                raise
+            time.sleep(0.2)
     subprocess.run(command + [str(moved / script), '--setup-only', '--offline'],
                    env=env, cwd=tmp_path, check=True, timeout=240)
     assert (moved / 'data/keep.txt').read_text() == 'preserved user data'
