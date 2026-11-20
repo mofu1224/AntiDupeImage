@@ -1,0 +1,32 @@
+name: 機能提案
+description: 解決したい問題と期待する挙動を提案します
+title: "[提案] "
+body:
+  - type: markdown
+    attributes:
+      value: APIトークン、個人パス、私的画像、フォルダー一覧、DB内容は記載・添付しないでください。
+  - type: textarea
+    id: problem
+    attributes:
+      label: 解決したい問題
+      description: 現在どのような作業で困っているかを書いてください。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 希望する挙動
+      description: 実装方法ではなく、利用者から見た結果を中心に書いてください。
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: ファイル安全性・プライバシーへの影響
+      description: 画像の読み取り、移動、削除、外部送信、保存データへの影響を書いてください。なければ「なし」。
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 検討した代替案

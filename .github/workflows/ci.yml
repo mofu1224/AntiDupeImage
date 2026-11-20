@@ -1,0 +1,192 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.14"]
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          enable-cache: true
+      - name: Install backend dependencies
+        run: uv sync --project backend --locked --extra dev
+      - name: Lint backend
+        run: uv run --project backend ruff check .
+      - name: Audit locked Python dependencies
+        if: matrix.python-version == '3.12'
+        run: python backend/tools/audit_locked_dependencies.py
+      - name: Run backend tests
+        run: uv run --directory backend --project . pytest
+      - name: Build backend release artifacts
+        if: matrix.python-version == '3.12'
+        run: uv build --project backend
+
+  backend-windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      UV_PROJECT_ENVIRONMENT: ${{ github.workspace }}\.venv
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          enable-cache: true
+      - name: Install backend dependencies
+        run: uv sync --project backend --locked --extra dev
+      - name: Lint backend
+        run: uv run --project backend ruff check .
+      - name: Validate Windows ML requirements exports
+        shell: pwsh
+        run: |
+          foreach ($extra in @("ml", "ml-cu130")) {
+            $requirements = "$env:RUNNER_TEMP\antidupeimage-$extra.txt"
+            uv export --project backend --locked --extra $extra --no-dev --no-emit-project --python .venv\Scripts\python.exe --output-file $requirements
+            if ($extra -eq "ml-cu130") {
+              uv pip install --dry-run --python .venv\Scripts\python.exe --requirements $requirements --index https://download.pytorch.org/whl/cu130 --index-strategy unsafe-best-match --require-hashes --strict
+            } else {
+              uv pip install --dry-run --python .venv\Scripts\python.exe --requirements $requirements --require-hashes --strict
+            }
+          }
+      - name: Run backend tests
+        run: uv run --directory backend --project . pytest
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          enable-cache: true
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install backend dependencies for E2E
+        run: uv sync --project backend --locked --extra dev
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
+      - name: Audit frontend dependencies
+        run: npm audit --prefix frontend --audit-level=high
+      - name: Run frontend tests
+        run: npm run test --prefix frontend
+      - name: Type-check frontend E2E code
+        run: npm run typecheck:e2e --prefix frontend
+      - name: Build frontend
+        run: npm run build --prefix frontend
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - name: Run frontend E2E tests
+        run: npm run test:e2e --prefix frontend
+
+  launchers:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: Check macOS shell scripts
+        if: runner.os == 'Linux'
+        run: |
+          bash -n AntiDupeImage.command scripts/bootstrap.sh setup_mac.sh run_mac.sh
+          bash AntiDupeImage.command --help
+      - name: Parse Windows PowerShell launcher
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path "run_windows.ps1"),
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_ }
+            exit 1
+          }
+      - name: Check Windows shortcut wrappers
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          call AntiDupeImage.bat --help
+          call run_windows.bat --help
+          call setup_windows.bat --help
+
+  portable-clone:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      ADI_PORTABLE_SMOKE: '1'
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+      - name: Install isolated test dependencies
+        run: uv sync --project backend --locked --extra dev
+      - name: Cold setup, offline relocation, authentication and scan
+        run: uv run --directory backend --project . pytest tests/test_portable.py -p no:cacheprovider
+
+  ci-gate:
+    name: CI Gate
+    if: always()
+    needs: [backend, backend-windows, frontend, launchers, portable-clone]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify required jobs
+        env:
+          BACKEND_RESULT: ${{ needs.backend.result }}
+          BACKEND_WINDOWS_RESULT: ${{ needs.backend-windows.result }}
+          FRONTEND_RESULT: ${{ needs.frontend.result }}
+          LAUNCHERS_RESULT: ${{ needs.launchers.result }}
+          PORTABLE_RESULT: ${{ needs.portable-clone.result }}
+        run: |
+          for result in \
+            "$BACKEND_RESULT" \
+            "$BACKEND_WINDOWS_RESULT" \
+            "$FRONTEND_RESULT" \
+            "$LAUNCHERS_RESULT" \
+            "$PORTABLE_RESULT"
+          do
+            if [ "$result" != "success" ]; then
+              echo "Required job result: $result"
+              exit 1
+            fi
+          done

@@ -1,0 +1,67 @@
+# Python / uv
+.venv/
+.uv-cache/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+backend/build/
+backend/dist/
+
+# Python checks and coverage
+.pytest_cache/
+backend/.pytest-tmp/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Frontend dependencies, builds, and tests
+node_modules/
+!/licenses/npm/node_modules/
+/.vite/
+/.vite-runtime/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+frontend/playwright-report/
+frontend/blob-report/
+frontend/test-results/
+.playwright-runtime/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local runtime data
+*.sqlite
+*.sqlite3
+*.db
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
+*.db-wal
+*.db-shm
+/data/
+/models/
+/cache/
+/.release-work/
+/.portable/
+AntiDupeImage_Duplicates_*/
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
